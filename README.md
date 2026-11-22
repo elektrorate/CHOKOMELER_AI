@@ -1,35 +1,43 @@
-# CHOKOMELER AI — backend de texto (fase 3)
+# CHOKOMELER AI — Backend Gemini (fase 3)
 
-Proyecto independiente de Casa Rosier y del APK Android TV.
+Backend de texto alojado en **Vercel**, independiente del launcher Android TV. El endpoint de chat conserva su contrato: `POST /api/chat` con `{"message":"..."}`, autenticación Bearer, y respuesta con campo `answer`.
 
-## Desplegar en Vercel
+## Configuración en Vercel
 
-1. Clona este repositorio o impórtalo en Vercel desde GitHub.
-2. Crea un proyecto **nuevo** llamado `chokomeler-ai` en tu equipo de Vercel. No lo vincules al proyecto de Casa Rosier.
-3. En Vercel > Project > Settings > Environment Variables, define:
-   - `OPENAI_API_KEY`: clave privada de OpenAI.
-   - `CHOKOMELER_DEVICE_TOKEN`: token aleatorio largo para autorizar el dispositivo.
-   - `OPENAI_MODEL`: `gpt-4.1-mini` (opcional).
-4. Despliega de nuevo después de establecer las variables.
-5. Comprueba `https://TU-DOMINIO.vercel.app/api/health`.
+Proyecto existente: `elektrorates-projects/chokomelerai`.
 
-## Prueba de conversación desde PowerShell
+En **Settings > Environment Variables**, configura para **Production**:
 
-No compartas claves ni tokens en chats ni los publiques en GitHub.
+- `GEMINI_API_KEY` (obligatoria): clave privada creada en https://aistudio.google.com/apikey.
+- `CHOKOMELER_DEVICE_TOKEN` (obligatoria): conserva el token privado ya configurado.
+- `GEMINI_MODEL` (opcional): `gemini-2.5-flash-lite`, el valor por defecto.
+
+La clave antigua `OPENAI_API_KEY` ya **no se utiliza** por el backend; puedes eliminarla del proyecto Vercel después de verificar Gemini. No pegues claves en el chat, código fuente o commits.
+
+Vercel debe realizar un despliegue **Production / Ready** después de añadir las variables. Si GitHub está conectado, un push puede generar un nuevo despliegue; si no, usa **Redeploy**. Revisa que el dominio de pruebas no esté bloqueado por Vercel Authentication.
+
+## Pruebas sin exponer el token
+
+Verifica `https://chokomelerai-git-main-elektrorates-projects.vercel.app/api/health`.
 
 ```powershell
-$base = "https://TU-PROYECTO.vercel.app"
-$token = Read-Host "Token privado del dispositivo"
-Invoke-RestMethod -Uri "$base/api/chat" -Method Post -Headers @{ Authorization = "Bearer $token" } -ContentType 'application/json; charset=utf-8' -Body '{"message":"Hola, ¿qué puedes hacer?"}'
+$base = "https://chokomelerai-git-main-elektrorates-projects.vercel.app"
+$token = Read-Host "Token del dispositivo (no lo compartas)"
+$body = @{ message = "Hola CHOKOMELER AI" } | ConvertTo-Json -Compress
+Invoke-RestMethod -Uri "$base/api/chat" -Method Post -Headers @{ Authorization = "Bearer $token" } -ContentType "application/json; charset=utf-8" -Body ([Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec 30
 ```
 
-## Seguridad y límites
+## Seguridad y cuotas
 
-Este backend es un **prototipo** de un solo dispositivo. La clave de OpenAI se mantiene exclusivamente en Vercel, nunca en el código Android. El token del dispositivo tampoco debe estar en este repositorio. Antes de uso prolongado, se necesitarán emparejamiento y revocación de dispositivos, rate limits distribuidos y un presupuesto/límite de gasto en OpenAI. El token local puede extraerse de un dispositivo comprometido, así que no se considera autenticación fuerte.
+- `GEMINI_API_KEY` solo debe existir en las variables privadas de Vercel.
+- `CHOKOMELER_DEVICE_TOKEN` autentica peticiones, pero un token almacenado en un APK podría extraerse. Se necesita emparejamiento y revocación antes de una distribución pública.
+- Este prototipo todavía **no** implementa rate limiting distribuido. No distribuyas el token.
+- Google ofrece cuotas gratuitas para determinados modelos/proyectos; **no son ilimitadas** y dependen de elegibilidad, región, cuota y condiciones actuales. Comprueba el coste y límites en https://ai.google.dev/gemini-api/docs/pricing antes de activar facturación.
+- La aplicación Android TV, el clima y los botones del mando no se modifican en esta fase.
 
 ## Endpoints
 
-- `GET /api/health`: comprobación de estado.
-- `POST /api/chat`: recibe JSON `{"message":"..."}` y requiere `Authorization: Bearer <token>`.
+- `GET /api/health`: devuelve `ok: true` si la función de estado está desplegada.
+- `POST /api/chat`: requiere `Authorization: Bearer <CHOKOMELER_DEVICE_TOKEN>`, devuelve `answer`.
 
-En esta fase solo se implementa texto. No controla aplicaciones ni reemplaza Google Assistant, y no modifica el módulo del clima.
+La prueba de salud no garantiza que Gemini esté configurado: la primera consulta autenticada comprueba el proveedor.
