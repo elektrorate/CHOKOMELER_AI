@@ -45,6 +45,14 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'message_must_be_1_to_700_chars' });
   }
 
+  // Respuesta personalizada solicitada para CHOKOMELER TV.
+  const normalized = message.trim().normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/[¿?¡!.,]/g, '').replace(/\s+/g, ' ').trim();
+  if (normalized === 'quien es la familia chocomeler') {
+    return res.status(200).json({ answer: 'Los Díaz Guayanay', provider: 'chokomeler' });
+  }
+
   const model = process.env.GEMINI_MODEL || DEFAULT_MODEL;
   if (!/^[a-zA-Z0-9._-]{1,100}$/.test(model)) {
     return res.status(503).json({ error: 'invalid_model_configuration' });
